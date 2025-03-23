@@ -374,15 +374,15 @@ class _BarChartRace(CommonChart):
         self.add_bar_labels(ax, bar_location, bar_length)
         self.add_perpendicular_bar(ax, bar_length, i)
 
-        if self.last_frame_text and len(self.df_values)-1 == i:
+        if self.last_frame_text and len(self.df_values) - 2 == i:
             ax.text(
-                0.05, 0.95,                  
-                self.last_frame_text,       
-                transform=ax.transAxes,      
-                fontsize=12,                 
+                0.25, 1,
+                self.last_frame_text,
+                transform=ax.transAxes,
+                fontsize=12,
                 verticalalignment='top',
-                wrap=True,  
-                bbox=dict(facecolor='white', alpha=0.5) 
+                wrap=True,
+                bbox=dict(facecolor='white', alpha=0.4)
             )
 
     def add_period_label(self, ax, i):
