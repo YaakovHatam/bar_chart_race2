@@ -482,7 +482,7 @@ class _BarChartRace(CommonChart):
 
         interval = self.period_length / self.steps_per_period
         pause = int(self.end_period_pause // interval)
-        last_pause = self.last_frame_pause % interval
+        last_pause = int(self.last_frame_pause % interval)
 
         def frame_generator(n):
             frames = []
