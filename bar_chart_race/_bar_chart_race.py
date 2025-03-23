@@ -17,7 +17,7 @@ class _BarChartRace(CommonChart):
                  period_label, period_template, period_summary_func, perpendicular_bar_func, 
                  colors, title, bar_size, bar_textposition, bar_texttemplate, bar_label_font, 
                  tick_label_font, tick_template, shared_fontdict, scale, fig, writer, 
-                 bar_kwargs, fig_kwargs, filter_column_colors):
+                 bar_kwargs, fig_kwargs, filter_column_colors, last_frame_text, last_frame_pause):
         self.filename = filename
         self.extension = self.get_extension()
         self.orientation = orientation
@@ -57,6 +57,8 @@ class _BarChartRace(CommonChart):
         self.fig_kwargs = self.get_fig_kwargs(fig_kwargs)
         self.subplots_adjust = self.get_subplots_adjust()
         self.fig = self.get_fig(fig)
+        self.last_frame_text = last_frame_text
+        self.last_frame_pause = last_frame_pause
 
     def validate_params(self):
         if isinstance(self.filename, str):
@@ -372,6 +374,17 @@ class _BarChartRace(CommonChart):
         self.add_bar_labels(ax, bar_location, bar_length)
         self.add_perpendicular_bar(ax, bar_length, i)
 
+        if self.last_frame_text and len(self.df_values)-1 == i:
+            ax.text(
+                0.05, 0.95,                  
+                self.last_frame_text,       
+                transform=ax.transAxes,      
+                fontsize=12,                 
+                verticalalignment='top',
+                wrap=True,  
+                bbox=dict(facecolor='white', alpha=0.5) 
+            )
+
     def add_period_label(self, ax, i):
         if self.period_label:
             if self.period_template:
@@ -469,6 +482,7 @@ class _BarChartRace(CommonChart):
 
         interval = self.period_length / self.steps_per_period
         pause = int(self.end_period_pause // interval)
+        last_pause = self.last_frame_pause % interval
 
         def frame_generator(n):
             frames = []
@@ -477,6 +491,9 @@ class _BarChartRace(CommonChart):
                 if pause and i % self.steps_per_period == 0 and i != 0 and i != n - 1:
                     for _ in range(pause):
                         frames.append(None)
+            if last_pause:
+                for _ in range(last_pause):
+                    frames.append(None)
             return frames
         
         frames = frame_generator(len(self.df_values))
@@ -517,7 +534,8 @@ def bar_chart_race(df, filename=None, orientation='h', sort='desc', n_bars=None,
                    bar_textposition='outside', bar_texttemplate='{x:,.0f}',
                    bar_label_font=None, tick_label_font=None, tick_template='{x:,.0f}',
                    shared_fontdict=None, scale='linear', fig=None, writer=None, 
-                   bar_kwargs=None,  fig_kwargs=None, filter_column_colors=False):
+                   bar_kwargs=None,  fig_kwargs=None, filter_column_colors=False, 
+                   last_frame_text = None, last_frame_pause=0):
     '''
     Create an animated bar chart race using matplotlib. Data must be in 
     'wide' format where each row represents a single time period and each 
@@ -872,5 +890,6 @@ def bar_chart_race(df, filename=None, orientation='h', sort='desc', n_bars=None,
                         period_label, period_template, period_summary_func, perpendicular_bar_func,
                         colors, title, bar_size, bar_textposition, bar_texttemplate, 
                         bar_label_font, tick_label_font, tick_template, shared_fontdict, scale, 
-                        fig, writer, bar_kwargs, fig_kwargs, filter_column_colors)
+                        fig, writer, bar_kwargs, fig_kwargs, filter_column_colors, 
+                        last_frame_text, last_frame_pause)
     return bcr.make_animation()
