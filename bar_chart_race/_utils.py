@@ -108,7 +108,7 @@ def prepare_wide_data(df, orientation='h', sort='desc', n_bars=None, interpolate
         else:
             df_values.iloc[:, 0] = df_values.iloc[:, 0].interpolate()
     else:
-        df_values.iloc[:, 0] = df_values.iloc[:, 0].fillna(method='ffill')
+        df_values.iloc[:, 0] = df_values.iloc[:, 0].ffill()
     
     df_values = df_values.set_index(df_values.columns[0])
     if compute_ranks:
