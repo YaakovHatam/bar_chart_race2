@@ -10,7 +10,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="bar_chart_race",
+    name="bar_chart_race2",
     version=version,
     author="Ted Petrou",
     author_email="petrou.theodore@gmail.com",
@@ -18,7 +18,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords="visualization animation bar chart race matplotlib pandas plotly",
-    url="https://github.com/dexplo/bar_chart_race",
+    url="https://github.com/YaakovHatam/bar_chart_race2",
     packages=setuptools.find_packages(),
     license='MIT',
     classifiers=[
