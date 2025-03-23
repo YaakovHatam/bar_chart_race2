@@ -9,7 +9,8 @@ Make animated bar and line chart races in Python with matplotlib or plotly.
 last_frame_pause=20,
 
 
-last_frame_text="Text for the last frame",
+last_frame_text={"text": humorous_advice, "num_of_last_frames": 10},
+
 ![img](https://github.com/dexplo/bar_chart_race/raw/gh-pages/images/covid19_horiz.gif)
 
 ## Official Documentation
