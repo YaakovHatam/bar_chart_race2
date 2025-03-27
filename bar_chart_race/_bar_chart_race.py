@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 from ._func_animation import FuncAnimation
 from matplotlib.colors import Colormap
+import matplotlib.pyplot as plt
+from matplotlib.offsetbox import TextArea, AnnotationBbox
+import textwrap
 
 from ._common_chart import CommonChart
 from ._utils import prepare_wide_data
@@ -444,16 +447,23 @@ class _BarChartRace(CommonChart):
             self.last_frame_text
             and len(self.df_values) - self.last_frame_text["num_of_last_frames"] <= i
         ):
-            ax.text(
-                0.25,
-                0.98,
-                self.last_frame_text["text"],
-                transform=ax.transAxes,
-                fontsize=12,
-                verticalalignment="top",
-                wrap=True,
-                bbox=dict(facecolor="white", alpha=0.4),
+            text = self.last_frame_text["text"]  # replace with your text variable
+            wrapped_text = textwrap.fill(text, width=40)  # adjust width as needed
+
+            # Create a TextArea with your wrapped text
+            text_area = TextArea(wrapped_text, textprops=dict(fontsize=12))
+
+            # Create an AnnotationBbox to control placement and the bounding box appearance
+            ab = AnnotationBbox(
+                text_area,
+                (0.25, 0.98),  # position in axis fraction coordinates
+                xycoords="axes fraction",
+                boxcoords="axes fraction",
+                box_alignment=(0, 1),  # align top-left
+                bboxprops=dict(facecolor="white", alpha=0.4, edgecolor="none"),
             )
+
+            ax.add_artist(ab)
 
     def add_period_label(self, ax, i):
         if self.period_label:
