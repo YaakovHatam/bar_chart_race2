@@ -1,16 +1,16 @@
+import io
+import textwrap
 import warnings
 
-import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import ticker
-from ._func_animation import FuncAnimation
+import pandas as pd
 from matplotlib.colors import Colormap
-import matplotlib.pyplot as plt
-from matplotlib.offsetbox import TextArea, AnnotationBbox
-import textwrap
+from matplotlib.offsetbox import AnnotationBbox, TextArea
 
+from ._colormaps import colormaps
 from ._common_chart import CommonChart
+from ._func_animation import FuncAnimation
 from ._utils import prepare_wide_data
 
 
@@ -34,6 +34,7 @@ class _BarChartRace(CommonChart):
         perpendicular_bar_func,
         colors,
         title,
+        video_desc,
         bar_size,
         bar_textposition,
         bar_texttemplate,
@@ -43,15 +44,15 @@ class _BarChartRace(CommonChart):
         shared_fontdict,
         scale,
         fig,
-        writer,
         bar_kwargs,
         fig_kwargs,
         filter_column_colors,
         last_frame_text,
         last_frame_pause,
     ):
+        super().__init__(filename, fig_kwargs)
+
         self.filename = filename
-        self.extension = self.get_extension()
         self.orientation = orientation
         self.sort = sort
         self.n_bars = n_bars or df.shape[1]
@@ -66,6 +67,7 @@ class _BarChartRace(CommonChart):
         self.period_summary_func = period_summary_func
         self.perpendicular_bar_func = perpendicular_bar_func
         self.title = self.get_title(title)
+        self.video_desc = video_desc
         self.bar_size = bar_size
         self.bar_textposition = bar_textposition
         self.bar_texttemplate = bar_texttemplate
@@ -74,19 +76,25 @@ class _BarChartRace(CommonChart):
         self.tick_template = self.get_tick_template(tick_template)
         self.orig_rcParams = self.set_shared_fontdict(shared_fontdict)
         self.scale = scale
-        self.fps = 1000 / self.period_length * steps_per_period
-        self.writer = self.get_writer(writer)
+
+        self.writer = self.get_writer(
+            metadata={
+                "title": title,
+                "artist": "https://www.youtube.com/@StatStories",
+                "comment": video_desc,
+            },
+            fps=1000 / period_length * steps_per_period,
+        )
         self.filter_column_colors = filter_column_colors
         self.extra_pixels = 0
         self.validate_params()
 
         self.bar_kwargs = self.get_bar_kwargs(bar_kwargs)
-        self.html = self.filename is None
         self.df_values, self.df_ranks = self.prepare_data(df)
         self.col_filt = self.get_col_filt()
         self.bar_colors = self.get_bar_colors(colors)
         self.str_index = self.df_values.index.astype("str")
-        self.fig_kwargs = self.get_fig_kwargs(fig_kwargs)
+
         self.subplots_adjust = self.get_subplots_adjust()
         self.fig = self.get_fig(fig)
         self.last_frame_text = last_frame_text
@@ -96,8 +104,8 @@ class _BarChartRace(CommonChart):
         if isinstance(self.filename, str):
             if "." not in self.filename:
                 raise ValueError("`filename` must have an extension")
-        elif self.filename is not None:
-            raise TypeError("`filename` must be None or a string")
+        else:
+            raise TypeError("`filename` must be a string")
 
         if self.sort not in ("asc", "desc"):
             raise ValueError('`sort` must be "asc" or "desc"')
@@ -235,6 +243,21 @@ class _BarChartRace(CommonChart):
                 self.df_ranks = self.df_ranks.loc[:, col_filt]
         return col_filt
 
+    def get_title(self, title):
+        if isinstance(title, str):
+            return {"label": title}
+        elif isinstance(title, dict):
+            if "label" not in title:
+                raise ValueError(
+                    'You must use the key "label" in the `title` dictionary '
+                    "to supply the name of the title"
+                )
+        elif title is not None:
+            raise TypeError("`title` must be either a string or dictionary")
+        else:
+            return {"label": None}
+        return title
+
     def get_bar_colors(self, colors):
         if colors is None:
             colors = "dark12"
@@ -242,15 +265,13 @@ class _BarChartRace(CommonChart):
                 colors = "dark24"
 
         if isinstance(colors, str):
-            from ._colormaps import colormaps
-
             try:
                 bar_colors = colormaps[colors.lower()]
-            except KeyError:
+            except KeyError as exc:
                 raise KeyError(
                     f"Colormap {colors} does not exist. Here are the "
                     f"possible colormaps: {colormaps.keys()}"
-                )
+                ) from exc
         elif isinstance(colors, Colormap):
             bar_colors = colors(range(colors.N)).tolist()
         elif isinstance(colors, list):
@@ -267,7 +288,6 @@ class _BarChartRace(CommonChart):
 
         # bar_colors is now a list
         n = len(bar_colors)
-        orig_bar_colors = bar_colors
         if self.df_values.shape[1] > n:
             bar_colors = bar_colors * (self.df_values.shape[1] // n + 1)
         bar_colors = np.array(bar_colors[: self.df_values.shape[1]])
@@ -317,8 +337,6 @@ class _BarChartRace(CommonChart):
             ax.tick_params(axis="x", labelrotation=30)
 
     def get_subplots_adjust(self):
-        import io
-
         fig = plt.Figure(**self.fig_kwargs)
         ax = fig.add_subplot()
         plot_func = ax.barh if self.orientation == "h" else ax.bar
@@ -552,8 +570,8 @@ class _BarChartRace(CommonChart):
         if i is None:
             return
         ax = self.fig.axes[0]
-        for bar in ax.containers:
-            bar.remove()
+        for bar_container in ax.containers:
+            bar_container.remove()
         start = int(bool(self.period_label))
         for text in ax.texts[start:]:
             text.remove()
@@ -590,31 +608,16 @@ class _BarChartRace(CommonChart):
             if fc == (1, 1, 1, 0):
                 fc = "white"
             savefig_kwargs = {"facecolor": fc}
-            if self.html:
-                ret_val = anim.to_html5_video(savefig_kwargs=savefig_kwargs)
-                try:
-                    from IPython.display import HTML
-
-                    ret_val = HTML(ret_val)
-                except ImportError:
-                    pass
-            else:
-                fc = self.fig.get_facecolor()
-                if fc == (1, 1, 1, 0):
-                    fc = "white"
-                ret_val = anim.save(
-                    self.filename,
-                    fps=self.fps,
-                    writer=self.writer,
-                    savefig_kwargs=savefig_kwargs,
-                )
+            anim.save(
+                self.filename,
+                writer=self.writer,
+                savefig_kwargs=savefig_kwargs,
+            )
         except Exception as e:
             message = str(e)
-            raise Exception(message)
+            raise RuntimeError(message) from e
         finally:
             plt.rcParams = self.orig_rcParams
-
-        return ret_val
 
 
 def bar_chart_race(
@@ -635,6 +638,7 @@ def bar_chart_race(
     perpendicular_bar_func=None,
     colors=None,
     title=None,
+    video_desc=None,
     bar_size=0.95,
     bar_textposition="outside",
     bar_texttemplate="{x:,.0f}",
@@ -644,7 +648,6 @@ def bar_chart_race(
     shared_fontdict=None,
     scale="linear",
     fig=None,
-    writer=None,
     bar_kwargs=None,
     fig_kwargs=None,
     filter_column_colors=False,
@@ -658,12 +661,7 @@ def bar_chart_race(
     the time period. Bar length and location change linearly from one
     time period to the next.
 
-    If no `filename` is given, an HTML string is returned, otherwise the
-    animation is saved to disk.
-
-    You must have ffmpeg installed on your machine to save videos to disk
-    and ImageMagick to save animated gifs. Read more here:
-    https://www.dexplo.org/bar_chart_race/installation/
+    You must have ffmpeg installed: https://www.dexplo.org/bar_chart_race/installation/
 
     Parameters
     ----------
@@ -673,9 +671,8 @@ def bar_chart_race(
         category. Optionally, use the index to label each time period.
         The index can be of any type.
 
-    filename : `None` or str, default None
-        If `None` return animation as an HTML5 string. If a string, save
-        animation to that filename location. Use .mp4, .gif, .html, .mpeg,
+    filename : str
+        save animation to that filename location. Use .mp4, .gif, .mpeg,
         .mov or any other extensions supported by ffmpeg or ImageMagick.
 
     orientation : 'h' or 'v', default 'h'
@@ -817,6 +814,9 @@ def bar_chart_race(
         Append "_r" to the colormap name to use the reverse of the colormap.
         i.e. "dark12_r"
 
+    video_desc: str
+        Description of the video. This will be added to the metadata of the video file.
+
     title : str or dict, default None
         Title of plot as a string. Use a dictionary to supply several title
         parameters. You must use the key 'label' for the title.
@@ -894,16 +894,6 @@ def bar_chart_race(
     fig : matplotlib Figure, default None
         For greater control over the aesthetics, supply your own figure.
 
-    writer : str or matplotlib Writer instance
-        This argument is passed to the matplotlib FuncAnimation.save method.
-
-        By default, the writer will be 'ffmpeg' unless creating a gif,
-        then it will be 'imagemagick', or an html file, then it
-        will be 'html'.
-
-        Find all of the availabe Writers:
-        >>> from matplotlib import animation
-        >>> animation.writers.list()
 
     bar_kwargs : dict, default None
         Other keyword arguments (within a dictionary) forwarded to the
@@ -951,8 +941,7 @@ def bar_chart_race(
 
     Returns
     -------
-    When `filename` is left as `None`, an HTML5 video is returned as a string.
-    Otherwise, a file of the animation is saved and `None` is returned.
+    `None` is returned.
 
     Examples
     --------
@@ -989,7 +978,6 @@ def bar_chart_race(
         shared_fontdict=None,
         scale='linear',
         fig=None,
-        writer=None,
         bar_kwargs={'alpha': .7},
         fig_kwargs={'figsize': (6, 3.5), 'dpi': 144},
         filter_column_colors=False)
@@ -1018,6 +1006,7 @@ def bar_chart_race(
         perpendicular_bar_func,
         colors,
         title,
+        video_desc,
         bar_size,
         bar_textposition,
         bar_texttemplate,
@@ -1027,7 +1016,6 @@ def bar_chart_race(
         shared_fontdict,
         scale,
         fig,
-        writer,
         bar_kwargs,
         fig_kwargs,
         filter_column_colors,
