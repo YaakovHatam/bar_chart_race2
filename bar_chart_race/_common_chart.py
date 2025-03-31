@@ -4,16 +4,32 @@ from matplotlib.animation import FFMpegWriter
 
 
 class CommonChart:
-    def __init__(self, filename, fig_kwargs):
+    def __init__(self, filename, fig_kwargs, title):
         self.filename = filename
         self.extension = self.filename.split(".")[-1]
         self.fig_kwargs = self.get_fig_kwargs(fig_kwargs)
+        self.title = self.get_title(title)
 
     def get_tick_template(self, tick_template):
         if isinstance(tick_template, str):
             return ticker.StrMethodFormatter(tick_template)
         elif callable(tick_template):
             return ticker.FuncFormatter(tick_template)
+
+    def get_title(self, title):
+        if isinstance(title, str):
+            return {"label": title}
+        elif isinstance(title, dict):
+            if "label" not in title:
+                raise ValueError(
+                    'You must use the key "label" in the `title` dictionary '
+                    "to supply the name of the title"
+                )
+        elif title is not None:
+            raise TypeError("`title` must be either a string or dictionary")
+        else:
+            return {"label": None}
+        return title
 
     def set_shared_fontdict(self, shared_fontdict):
         orig_rcParams = plt.rcParams.copy()
@@ -72,7 +88,6 @@ class CommonChart:
         if fig is not None:
             if not fig.axes:
                 raise ValueError("The figure passed to `fig` must have an axes")
-            ax = fig.axes[0]
         else:
             fig = self.create_figure()
         return fig

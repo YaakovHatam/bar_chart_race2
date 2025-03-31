@@ -50,7 +50,7 @@ class _BarChartRace(CommonChart):
         last_frame_text,
         last_frame_pause,
     ):
-        super().__init__(filename, fig_kwargs)
+        super().__init__(filename, fig_kwargs, title)
 
         self.filename = filename
         self.orientation = orientation
@@ -66,7 +66,6 @@ class _BarChartRace(CommonChart):
         self.period_template = period_template
         self.period_summary_func = period_summary_func
         self.perpendicular_bar_func = perpendicular_bar_func
-        self.title = self.get_title(title)
         self.video_desc = video_desc
         self.bar_size = bar_size
         self.bar_textposition = bar_textposition
@@ -242,21 +241,6 @@ class _BarChartRace(CommonChart):
                 self.df_values = self.df_values.loc[:, col_filt]
                 self.df_ranks = self.df_ranks.loc[:, col_filt]
         return col_filt
-
-    def get_title(self, title):
-        if isinstance(title, str):
-            return {"label": title}
-        elif isinstance(title, dict):
-            if "label" not in title:
-                raise ValueError(
-                    'You must use the key "label" in the `title` dictionary '
-                    "to supply the name of the title"
-                )
-        elif title is not None:
-            raise TypeError("`title` must be either a string or dictionary")
-        else:
-            return {"label": None}
-        return title
 
     def get_bar_colors(self, colors):
         if colors is None:
